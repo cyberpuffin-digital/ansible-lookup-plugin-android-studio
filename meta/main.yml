@@ -1,0 +1,13 @@
+---
+dependencies: []
+
+galaxy_info:
+  author: Cyber Puffin
+  description: "Pull latest Android Studio or CLI Tools information."
+  license: "BSD-2-Clause"
+  min_ansible_version: "2.10"
+  role_name: lookup_plugin_android_studio
+  galaxy_tags:
+    - "android"
+    - "androidsdk"
+

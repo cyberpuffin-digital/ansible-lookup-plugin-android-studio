@@ -1,0 +1,26 @@
+---
+module: get_latest
+author: Cyber Puffin
+version_added: "2.15"
+short_description: Lookup latest version and download URL for Android Studio or CLI tools.
+description:
+  - Pull and parse Android developer page for relevant version and download URLs.
+  - Match OS and utility to determine appropriate URL.
+options:
+  target_os:
+    description:
+      - OS matching download link on android developer page.
+      - Available options - chromeos, linux, mac, mac_arm, windows.
+    type: str
+    required: true
+    default: linux
+  utility:
+    description: "Full studio or command line tools only (options: studio, cli)"
+    type: str
+    required: true
+    default: studio
+notes:
+  - Source (https://github.com/cyberpuffin-digital/ansible-lookup-plugin-android-studio/)
+  - Original source (https://raw.githubusercontent.com/snapcrafters/android-studio/master/get_latest.py)
+  - Ansible documentation (https://docs.ansible.com/ansible/latest/dev_guide/developing_plugins.html#lookup-plugins)
+
