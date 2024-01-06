@@ -124,7 +124,7 @@ class LookupModule(LookupBase):
 
         return matched
 
-    def print(self, msg):
+    def print_msg(self, msg):
         """Output message based on how the script has been called."""
         if __package__ == "ansible.plugins.lookup":
             self.display.v(msg)
@@ -136,7 +136,7 @@ class LookupModule(LookupBase):
         if terms and isinstance(terms, list):
             self.target_os = terms[0]
             self.utility = terms[1]
-            self.print(f"Scanning {URL_STUDIO_HOME} for {self.target_os} {self.utility}")
+            self.print_msg(f"Scanning {URL_STUDIO_HOME} for {self.target_os} {self.utility}")
 
         # Download and scan Android Developer page
         resp = open_url(URL_STUDIO_HOME)
@@ -159,10 +159,10 @@ class LookupModule(LookupBase):
         version = to_text(version)
 
         if version:
-            self.print(f"Version: {version}")
+            self.print_msg(f"Version: {version}")
 
         if url:
-            self.print(f"URL: {url}")
+            self.print_msg(f"URL: {url}")
 
         return [version, url]
 
