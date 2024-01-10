@@ -21,6 +21,6 @@ options:
     default: studio
 notes:
   - Source (https://github.com/cyberpuffin-digital/ansible-lookup-plugin-android-studio/)
-  - Original source (https://raw.githubusercontent.com/snapcrafters/android-studio/master/get_latest.py)
+  - Original source (https://github.com/snapcrafters/android-studio/commit/921d05fcc21e8b789fdef7d65ccc4c96e484a9a4)
   - Ansible documentation (https://docs.ansible.com/ansible/latest/dev_guide/developing_plugins.html#lookup-plugins)
 

@@ -1,5 +1,5 @@
 # ansible-lookup-plugin-android-studio
-Ansible lookup plugin based on Snapcraft's [get_latest.py](https://github.com/snapcrafters/android-studio/blob/master/get_latest.py) script, modified for use in Ansible.
+Ansible lookup plugin based on Snapcraft's [get_latest.py](https://github.com/snapcrafters/android-studio/commit/921d05fcc21e8b789fdef7d65ccc4c96e484a9a4) script, modified for use in Ansible.
 
 Lookup plugin downloads Android Developer page to scan for version information and download links for requested OS and utility.
 
