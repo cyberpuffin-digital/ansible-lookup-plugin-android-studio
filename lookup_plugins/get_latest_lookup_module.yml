@@ -2,14 +2,13 @@
 module: get_latest
 author: Cyber Puffin
 version_added: "2.15"
-short_description: Lookup latest version and download URL for Android Studio or CLI tools.
+short_description: Lookup latest download information for Android Studio or CLI tools.
 description:
-  - Pull and parse Android developer page for relevant version and download URLs.
-  - Match OS and utility to determine appropriate URL.
+  - Scrape Android developer page for requested download information.
 options:
   target_os:
     description:
-      - OS matching download link on android developer page.
+      - Download information for target Operating System.
       - Available options - chromeos, linux, mac, mac_arm, windows.
     type: str
     required: true

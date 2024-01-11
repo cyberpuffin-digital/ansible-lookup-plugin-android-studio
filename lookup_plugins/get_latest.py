@@ -8,29 +8,24 @@ Ansible lookup module for pulling latest Android Studio or CLI Tools information
 import argparse
 import re
 
-try:
-    from ansible.errors import AnsibleError, AnsibleParserError
-    from ansible.module_utils._text import to_text
-    from ansible.plugins.lookup import LookupBase
-    from ansible.utils.display import Display
-    from ansible.module_utils.urls import open_url
-    ansible_available = True
-except ImportError:
-    ansible_available = False
+from ansible.errors import AnsibleError, AnsibleParserError
+from ansible.module_utils._text import to_text
+from ansible.plugins.lookup import LookupBase
+from ansible.utils.display import Display
+from ansible.module_utils.urls import open_url
 
 DOCUMENTATION = r"""
 ---
 module: get_latest
 author: Cyber Puffin
 version_added: "2.15"
-short_description: Lookup Android Studio or CLI download details.
+short_description: Lookup latest download information for Android Studio or CLI tools.
 description:
-  - Pull and parse Android developer page for relevant version, download URLs, and checksum.
-  - Match OS and utility to determine appropriate URL.
+  - Scrape Android developer page for requested download information.
 options:
   target_os:
     description:
-      - OS matching download link on android developer page.
+      - Download information for target Operating System.
       - Available options - chromeos, linux, mac, mac_arm, windows.
     type: str
     required: true
@@ -49,30 +44,50 @@ notes:
 EXAMPLES = r"""
 - name: Get latest Android Studio info for Linux
   ansible.builtin.set_fact:
-    android_studio_details: "{{ lookup('get_latest', 'linux', 'studio') | split(',') | list }}"
+    android_studio_details: "{{ lookup('get_latest', 'linux', 'studio') }}"
 
-- name: Split lookup results into dedicated variables
-  ansible.builtin.set_fact:
-    android_studio_checksum: "{{ android_studio_details[0]}}"
-    android_studio_download: "{{ android_studio_details[1]}}"
-    android_studio_version: "{{ android_studio_details[2]}}"
+- name: Download Android Studio {{ android_studio_details.version }}
+  ansible.builtin.get_url:
+    url: "{{ android_studio_details.url }}"
+    checksum: "sha256:{{ android_studio_details.checksum }}"
+    dest: "{{ androidsdk_base_path }}/downloads/{{ android_studio_details.filename }}"
+    mode: "0775"
+  register: androidsdk_studio_archive
+
+- name: Extract Android studio ({{ androidsdk_studio_archive.dest }})
+  ansible.builtin.unarchive:
+    src: "{{ androidsdk_studio_archive.dest }}"
+    dest: "{{ androidsdk_base_path }}/"
+    remote_src: true
+  when: androidsdk_studio_archive is changed
+
+- name: Link Android Studio startup script to system path
+  ansible.builtin.file:
+    path: "/usr/local/bin/android-studio.sh"
+    src: "{{ androidsdk_base_path }}/android-studio/bin/studio.sh"
+    state: link
+  when: androidsdk_studio_archive is changed
 
 - name: Get latest Android CLI tools info for Linux
   ansible.builtin.set_fact:
-    android_studio_details: "{{ lookup('get_latest', 'linux', 'cli') | split(',') | list }}"
+    android_studio_details: "{{ lookup('get_latest', 'linux', 'cli') }}"
 
 - name: Get latest Android Studio info for Windows
   ansible.builtin.set_fact:
-    android_studio_details: "{{ lookup('get_latest', 'windows', 'studio') | split(',') | list }}"
+    android_studio_details: "{{ lookup('get_latest', 'windows', 'studio') }}"
 
 - name: Get latest Android CLI tools info for Mac
   ansible.builtin.set_fact:
-    android_studio_details: "{{ lookup('get_latest', 'mac', 'cli') | split(',') | list  }}"
+    android_studio_details: "{{ lookup('get_latest', 'mac', 'cli')  }}"
 """
 
 RETURN = r"""
 checksum:
   description: SHA-256 checksum for download package.
+  returned: success
+  type: str
+filename:
+  description: Download file name
   returned: success
   type: str
 url:
@@ -92,12 +107,12 @@ class LookupModule(LookupBase):
 
     def __init__(self, target_os="linux", utility="studio", **kwargs):
         """Setup and initialize module"""
+        self.target_os = target_os
+        self.utility = utility
+
         if self.is_called_by_ansible():
             super(LookupBase, self).__init__()
             self.display = Display()
-
-        self.target_os = target_os
-        self.utility = utility
 
     def get_checksum(self, html):
         """Scan page results for OS + utility checksum."""
@@ -123,6 +138,7 @@ class LookupModule(LookupBase):
     def get_url(self, html):
         """Scan page results for OS + utility to find download URL."""
         matched = self.match_url(html)
+        filename = "Unavailable"
         url = "Unavailable"
         version = "Unavailable"
 
@@ -142,9 +158,10 @@ class LookupModule(LookupBase):
             raise LookupError(err_msg)
 
         url = to_text(matched[0])
+        filename = to_text(re.split(r"/", url)[-1])
         version = to_text(re.split(r"[-_]+", url)[-2])
 
-        return url, version
+        return filename, url, version
 
     def is_called_by_ansible(self):
         """Running inside Ansible?"""
@@ -261,7 +278,7 @@ class LookupModule(LookupBase):
     def print_msg(self, msg):
         """Output message based on how the script has been called."""
         if self.is_called_by_ansible():
-            self.display.v(msg)
+            self.display.v(to_text(msg))
         else:
             print(msg)
 
@@ -276,13 +293,21 @@ class LookupModule(LookupBase):
         html = open_url(URL_STUDIO_HOME).read().decode()
 
         # Scan html for requested information
-        url, version = self.get_url(html)
-        checksum = self.get_checksum(html)
+        filename, url, version = self.get_url(html)
 
-        # Display details
-        self.print_msg(f"URL: {url}\nVersion: {version}\nChecksum: {checksum}")
+        return_dict = {
+            "checksum": self.get_checksum(html),
+            "filename": filename,
+            "url": url,
+            "version": version
+        }
 
-        return [checksum, url, version]
+        self.print_msg(return_dict)
+
+        # Lookup modules require lists and deprecate dictionary returns as of 2.18
+        # May be a bit of a hack, but encapsulate the return dictionary in a list
+        # to keep key names.
+        return [return_dict]
 
 match __name__:
     case '__main__': # Script called directly
@@ -306,9 +331,6 @@ match __name__:
         lookup_module = LookupModule(args.os, args.utility)
         lookup_module.run()
     case 'ansible.plugins.lookup.get_latest': # Script called by Ansible
-        if ansible_available:
-            print("Called by Ansible")
-        else:
-            print("Ansible libraries failed to load.")
+        print("Called by Ansible")
     case _: # Not sure
         print(f"get_latest.py is being called in an unfamiliar way: {__name__}")
